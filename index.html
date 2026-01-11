@@ -370,8 +370,7 @@
             const statusIndicator = document.getElementById('db-status');
             const statusText = statusIndicator?.querySelector('.status-text');
 
-            // Don't double-initialize
-            if (supabase) return;
+            if (supabase) return; // Already initialized
 
             if (SUPABASE_URL && SUPABASE_ANON_KEY) {
                 try {
@@ -449,92 +448,33 @@
         }
 
         // --- Initialization ---
-        let appStarted = false;
+        window.appStarted = false;
         function startApp() {
-            if (appStarted) return;
-            appStarted = true;
+            if (window.appStarted) return;
+            window.appStarted = true;
 
-            // Attach Events
             const addBtn = document.getElementById('add-btn');
             const noteInput = document.getElementById('note-input');
 
             if (addBtn) addBtn.addEventListener('click', addNote);
             if (noteInput) noteInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addNote(); });
 
-            // Initialize DB
             initSupabase();
         }
 
-        // Global exposing for debug
+        // Expose globally for verification
         window.initSupabase = initSupabase;
         window.addNote = addNote;
 
-        // Force-start if events missed
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', startApp);
         } else {
             startApp();
         }
 
-        // Double-check fallback (GitHub Pages can be tricky)
+        // Final fallback for tricky environments
         setTimeout(startApp, 2000);
     </script>
-    </head>
-
-    <body>
-        <div class="background-blobs">
-            <div class="blob blob-1"></div>
-            <div class="blob blob-2"></div>
-            <div class="blob blob-3"></div>
-        </div>
-
-        <main class="container">
-            <header>
-                <div class="badge">Vercel + Supabase + GitHub</div>
-                <h1>Production Ready <span class="gradient-text">Starter</span></h1>
-                <p class="subtitle">Deploy high-performance apps without the build complexity.</p>
-            </header>
-
-            <section class="card glass">
-                <div class="card-header">
-                    <div class="status-indicator" id="db-status">
-                        <span class="dot"></span>
-                        <span class="status-text">Checking Connection...</span>
-                    </div>
-                    <h2>Database Sync Demo</h2>
-                </div>
-
-                <div class="input-group">
-                    <input type="text" id="note-input" placeholder="Enter a quick note..." autocomplete="off">
-                    <button id="add-btn" class="primary-btn">Save to DB</button>
-                </div>
-
-                <ul id="notes-list" class="notes-list">
-                    <li class="empty-state">No notes found. Connect your Supabase keys to start.</li>
-                </ul>
-            </section>
-
-            <section class="instructions">
-                <h3>How to Go Live</h3>
-                <div class="steps-grid">
-                    <div class="step-card">
-                        <span class="step-num">01</span>
-                        <h4>Supabase</h4>
-                        <p>Get your URL and Anon Key from your Supabase dashboard.</p>
-                    </div>
-                    <div class="step-card">
-                        <span class="step-num">02</span>
-                        <h4>GitHub</h4>
-                        <p>Push this folder to a new repository.</p>
-                    </div>
-                    <div class="step-card">
-                        <span class="step-num">03</span>
-                        <h4>Vercel</h4>
-                        <p>Import the repo. It will work out of the box as a static site!</p>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </body>
+</body>
 
 </html>
