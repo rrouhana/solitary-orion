@@ -9,12 +9,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
-
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js" defer
-        onerror="const el=document.querySelector('.status-text'); if(el) { el.innerText='Error: app.js failed to load'; el.style.color='red'; }"></script>
-
     <style>
         :root {
             --bg-color: #05070a;
@@ -361,6 +355,150 @@
             </div>
         </section>
     </main>
+
+    <!-- Supabase JS Library from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        (function () {
+            try {
+                // --- Safe Startup Check ---
+                console.log('Starting app...');
+                const debugStatus = document.getElementById('db-status')?.querySelector('.status-text');
+                if (debugStatus) {
+                    debugStatus.innerText = 'Script Initializing...';
+                    debugStatus.style.color = '#fbbf24'; // Yellow
+                }
+
+                // --- Supabase Config ---
+                const SUPABASE_URL = 'https://aiotlbnguhvavqwamilf.supabase.co';
+                const SUPABASE_ANON_KEY = 'sb_publishable_gVUaDUDY2hHkYi7YtYiYTw_isVrNTsx';
+
+                let supabase = null;
+
+                // --- Core Functions ---
+                async function initSupabase() {
+                    // Helper to update UI
+                    const setStatus = (msg, type) => {
+                        if (!debugStatus) return;
+                        debugStatus.innerText = msg;
+                        if (type === 'error') debugStatus.style.color = '#ef4444';
+                        if (type === 'success') {
+                            const indicator = document.getElementById('db-status');
+                            if (indicator) indicator.classList.add('connected');
+                            debugStatus.innerText = 'Supabase Connected';
+                            debugStatus.style.color = 'var(--text-secondary)';
+                        }
+                    };
+
+                    // 1. Check for library
+                    if (!window.supabase) {
+                        setStatus('Error: Supabase JS not loaded', 'error');
+                        return;
+                    }
+
+                    // 2. Initialize
+                    if (supabase) return; // Already done
+
+                    try {
+                        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                        setStatus('Connected!', 'success'); // Optimistic
+                        await loadNotes();
+                    } catch (err) {
+                        console.error('Supabase Setup Failed:', err);
+                        setStatus('Init Error: ' + err.message, 'error');
+                    }
+                }
+
+                async function loadNotes() {
+                    if (!supabase) return;
+                    try {
+                        const { data, error } = await supabase.from('notes').select('*').order('created_at', { ascending: false });
+                        if (error) throw error;
+                        renderNotes(data);
+                    } catch (err) {
+                        console.error('Notes loading failed:', err);
+                        if (debugStatus) debugStatus.innerText = 'DB Error: ' + err.message;
+                    }
+                }
+
+                function renderNotes(notes) {
+                    const list = document.getElementById('notes-list');
+                    if (!list) return;
+                    if (!notes || notes.length === 0) {
+                        list.innerHTML = '<li class="empty-state">No notes found yet. Be the first!</li>';
+                        return;
+                    }
+                    list.innerHTML = notes.map(note => `<li><div class="note-content">${escapeHTML(note.content)}</div></li>`).join('');
+                }
+
+                async function addNote() {
+                    const input = document.getElementById('note-input');
+                    const content = input?.value.trim();
+                    if (!content) return;
+
+                    if (!supabase) {
+                        addMockNote(content);
+                        if (input) input.value = '';
+                        return;
+                    }
+
+                    try {
+                        const { error } = await supabase.from('notes').insert([{ content }]);
+                        if (error) throw error;
+                        if (input) input.value = '';
+                        loadNotes();
+                    } catch (err) {
+                        alert('Oops! Could not save note: ' + err.message);
+                    }
+                }
+
+                function addMockNote(content) {
+                    const list = document.getElementById('notes-list');
+                    if (!list) return;
+                    const emptyState = list.querySelector('.empty-state');
+                    if (emptyState) emptyState.remove();
+                    const li = document.createElement('li');
+                    li.innerHTML = `<div class="note-content">${escapeHTML(content)} <span style="opacity: 0.5; font-size: 0.7rem;">(Mock Mode)</span></div>`;
+                    list.prepend(li);
+                }
+
+                function escapeHTML(str) {
+                    const p = document.createElement('p');
+                    p.textContent = str;
+                    return p.innerHTML;
+                }
+
+                // --- Initialization Loop ---
+                let attempts = 0;
+                function checkLib() {
+                    if (window.supabase) {
+                        initSupabase();
+                        // Setup Listeners
+                        const addBtn = document.getElementById('add-btn');
+                        const noteInput = document.getElementById('note-input');
+                        if (addBtn) addBtn.addEventListener('click', addNote);
+                        if (noteInput) noteInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addNote(); });
+                    } else {
+                        attempts++;
+                        if (attempts < 50) { // 5 seconds
+                            if (debugStatus) debugStatus.innerText = 'Loading Library...';
+                            setTimeout(checkLib, 100);
+                        } else {
+                            if (debugStatus) debugStatus.innerText = 'Error: Library Timeout';
+                        }
+                    }
+                }
+
+                checkLib();
+
+            } catch (globalErr) {
+                alert('Critical Script Error: ' + globalErr.message);
+                const ds = document.getElementById('db-status');
+                if (ds) ds.innerHTML = '<span style="color:red">CRITICAL JS ERROR: ' + globalErr.message + '</span>';
+            }
+        })();
+    </script>
 </body>
 
 </html>
