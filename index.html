@@ -428,11 +428,19 @@
         addBtn.addEventListener('click', addNote);
         noteInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addNote(); });
 
-        // Robust initialization for all environments
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initSupabase);
-        } else {
+        // Expose to window for reliability
+        window.initSupabase = initSupabase;
+
+        // Robust initialization
+        function startApp() {
+            console.log("Starting App...");
             initSupabase();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', startApp);
+        } else {
+            startApp();
         }
     </script>
 </body>
